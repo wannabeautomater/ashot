@@ -47,11 +47,21 @@ class DifferTestWithTolerance {
     void testIgnoredCoordsSame() throws IOException {
         Screenshot a =new Screenshot(IMAGE_A_TOLERANCE);
         Screenshot b = new Screenshot(IMAGE_B_TOLERANCE);
-        ImageDiff diff = new ImageDiffer().makeDiff(a, b);
+        DiffMarkupPolicy diffMarkUpPolicy = new PointsMarkupPolicy();
+        ImageDiff diff =  new ImageDiffer()
+                .withDiffMarkupPolicy(diffMarkUpPolicy.withDiffColor(Color.RED))
+                .makeDiff(a, b);
         File newFile =  new File("src/test/resources/img/diff_result.png");
         ImageIO.write(diff.getMarkedImage(), "png", newFile);
-        assertTrue(diff.hasDiff());
-        //assertImageEquals(diff.getMarkedImage(), "img/expected/ignore_coords_same.png");
+        System.out.println(diff.getDiffSize());
+        int differSize = allowedDifferSize(a,0.000986);
+        assertTrue(diff.withDiffSizeTrigger(differSize-1).hasDiff());
+        assertFalse(diff.withDiffSizeTrigger(differSize).hasDiff());
+    }
+
+    private int allowedDifferSize(Screenshot a,Double tolerance){
+        BufferedImage b = a.getImage();
+        return  (int)(b.getHeight() * b.getWidth() * tolerance);
     }
 
     private Screenshot createScreenshotWithIgnoredAreas(BufferedImage image, Coords ignoredArea) {
@@ -59,13 +69,4 @@ class DifferTestWithTolerance {
         screenshot.setIgnoredAreas(Collections.singleton(ignoredArea));
         return screenshot;
     }
-
-    static Stream<Arguments> dataWithIgnoredColorDiff() {
-        return Stream.of(
-                Arguments.of(Color.MAGENTA, IMAGE_IGNORED_PASS, false),
-                Arguments.of(Color.MAGENTA, IMAGE_IGNORED_FAIL, true),
-                Arguments.of(Color.RED,     IMAGE_IGNORED_PASS, true)
-        );
-    }
-
 }
